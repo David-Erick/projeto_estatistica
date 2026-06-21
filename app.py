@@ -445,6 +445,8 @@ def server(input, output, session):
 
     # ===== Regressão =====
 
+    MENSAGEM_VARIAVEIS_IGUAIS = "use variáveis diferentes"
+
     @reactive.calc
     def regressao():
         df = dados()
@@ -458,6 +460,9 @@ def server(input, output, session):
         if not xvar or not yvar:
             return None
 
+        if xvar == yvar:
+            return MENSAGEM_VARIAVEIS_IGUAIS
+
         temp = df[[xvar, yvar]].dropna()
 
         if len(temp) < 2:
@@ -465,25 +470,48 @@ def server(input, output, session):
 
         return linregress(temp[xvar], temp[yvar])
 
+
     @output
     @render.text
     def r():
         reg = regressao()
-        return "-" if reg is None else f"{reg.rvalue:.4f}"
+
+        if reg is None:
+            return "-"
+
+        if reg == MENSAGEM_VARIAVEIS_IGUAIS:
+            return MENSAGEM_VARIAVEIS_IGUAIS
+
+        return f"{reg.rvalue:.4f}"
+
 
     @output
     @render.text
     def r2():
         reg = regressao()
-        return "-" if reg is None else f"{reg.rvalue**2:.4f}"
+
+        if reg is None:
+            return "-"
+
+        if reg == MENSAGEM_VARIAVEIS_IGUAIS:
+            return MENSAGEM_VARIAVEIS_IGUAIS
+
+        return f"{reg.rvalue**2:.4f}"
+
 
     @output
     @render.text
     def equacao():
         reg = regressao()
+
         if reg is None:
             return "-"
+
+        if reg == MENSAGEM_VARIAVEIS_IGUAIS:
+            return MENSAGEM_VARIAVEIS_IGUAIS
+
         return f"ŷ = {reg.intercept:.4f} + {reg.slope:.4f}x"
+
 
     @output
     @render.plot
@@ -494,28 +522,52 @@ def server(input, output, session):
         df = dados()
 
         if df is not None and input.x() and input.y():
-            temp = df[[input.x(), input.y()]].dropna()
 
-            if len(temp) > 1:
-                reg = regressao()
+            if input.x() == input.y():
+                ax.text(
+                    0.5,
+                    0.5,
+                    MENSAGEM_VARIAVEIS_IGUAIS,
+                    ha="center",
+                    va="center",
+                    transform=ax.transAxes,
+                    fontsize=14,
+                    color="#cc0000",
+                    fontweight="bold"
+                )
+            else:
+                temp = df[[input.x(), input.y()]].dropna()
 
-                ax.scatter(temp[input.x()], temp[input.y()], color="#499CA6", alpha=0.7, edgecolors="none")
+                if len(temp) > 1:
+                    reg = regressao()
 
-                x_line = np.linspace(temp[input.x()].min(),
-                                     temp[input.x()].max(), 100)
+                    ax.scatter(
+                        temp[input.x()],
+                        temp[input.y()],
+                        color="#499CA6",
+                        alpha=0.7,
+                        edgecolors="none"
+                    )
 
-                y_line = reg.intercept + reg.slope * x_line
+                    x_line = np.linspace(
+                        temp[input.x()].min(),
+                        temp[input.x()].max(),
+                        100
+                    )
 
-                ax.plot(x_line, y_line, color="#2F6073", linewidth=2)
+                    y_line = reg.intercept + reg.slope * x_line
 
-                ax.set_xlabel(input.x(), color="#2D2D2D")
-                ax.set_ylabel(input.y(), color="#2D2D2D")
+                    ax.plot(x_line, y_line, color="#2F6073", linewidth=2)
+
+                    ax.set_xlabel(input.x(), color="#2D2D2D")
+                    ax.set_ylabel(input.y(), color="#2D2D2D")
 
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_color((0.176, 0.176, 0.176, 0.2)) # Correção efetuada aqui
-        ax.spines['bottom'].set_color((0.176, 0.176, 0.176, 0.2)) # Correção efetuada aqui
+        ax.spines['left'].set_color((0.176, 0.176, 0.176, 0.2))
+        ax.spines['bottom'].set_color((0.176, 0.176, 0.176, 0.2))
         ax.tick_params(colors='#2D2D2D')
+
         return fig
 
 
